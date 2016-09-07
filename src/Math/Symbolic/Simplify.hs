@@ -33,6 +33,8 @@ simplify = traverseMExpr moveSub
          . simplifyRule (a1 * a1) (a1**2)
          . simplifyRule ((a1**n1) * (a1**n2)) (a1**(n1+n2))
          . simplifyRule ((n1 * a1) + (n2 * a1)) ((n1 + n2) * a1)
+         . simplifyRule (a1 + (n1 * a1)) ((n1 + 1) * a1)
+         . simplifyRule' (a1 + ((n1 * a1) + a2)) ((n1 + 1) * a1 + a2)
          . simplifyRule (a1 + (negate a2 - a3)) (a1 - a2 - a3)
          . simplifyRule (a1 + (negate a2)) (a1 - a2)
          . simplifyRule (a1 + (a1 + a2)) ((a1*2) + a2)
