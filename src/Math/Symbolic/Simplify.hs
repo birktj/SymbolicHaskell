@@ -17,7 +17,7 @@ traverseMExpr f (MMultiOp op xs) = f . MMultiOp op $ fmap (f . traverseMExpr f) 
 traverseMExpr f x = f x
 
 
-simplifyRule rwmatch rwsub = traverseMExpr (rewrite (rearrange rwmatch) (rearrange rwsub))
+simplifyRule rwmatch rwsub = traverseMExpr (rewrite (rearrange rwmatch) (rearrange rwsub)) . rearrange
 simplifyRule' rwmatch rwsub = traverseMExpr (rewrite rwmatch rwsub)
 
 moveSub (MNum x) | x < 0     = MUnOp 0x02 . MNum $ abs x
@@ -34,6 +34,7 @@ simplify = traverseMExpr moveSub
          . simplifyRule ((a1**n1) * (a1**n2)) (a1**(n1+n2))
          . simplifyRule ((n1 * a1) + (n2 * a1)) ((n1 + n2) * a1)
          . simplifyRule (a1 + (n1 * a1)) ((n1 + 1) * a1)
+         . simplifyRule ((n1 * a1) + (a1 + a2)) (((n1 + 1) * a1) + a2)
          . simplifyRule' (a1 + ((n1 * a1) + a2)) ((n1 + 1) * a1 + a2)
          . simplifyRule (a1 + (negate a2 - a3)) (a1 - a2 - a3)
          . simplifyRule (a1 + (negate a2)) (a1 - a2)

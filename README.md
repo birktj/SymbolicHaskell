@@ -12,6 +12,6 @@ A parser along with a rule description language is also planned.
 import Math.Symbolic.Simplify
 
 main = do
-    print $. simplify $ x^2 + 5 + x^2 + x*x
+    print $ simplify $ x^2 + 5 + x^2 + x*x
     -- (3.0 * (x ^ 2.0)) + 5.0
 ```
