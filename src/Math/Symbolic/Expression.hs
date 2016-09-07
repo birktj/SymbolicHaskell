@@ -85,7 +85,7 @@ parens :: MExpression a -> Bool
 parens (MNum _) = False
 parens (MConst _) = False
 parens (MVar _) = False
-parens (MBiOp 0x01 _ _) = True
+parens (MBiOp 0x01 _ _) = False
 parens _ = True
 
 
