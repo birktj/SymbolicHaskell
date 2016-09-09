@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Math.Symbolic.Expression (MExpression (..)) where
+module Math.Symbolic.Expression where
 
 import Data.Word
 import Data.Maybe
@@ -68,22 +68,14 @@ getOrd [] = EQ
 getOrd (a:_) = a
 
 instance Ord a => Ord (MExpression a) where
-    --compare (MBiOp op1 x1 y1) (MBiOp op2 x2 y2) | op1 == op2 = compare y1 y2
-    --                                            | otherwise  = opCompare op1 op2
-    --compare (MBiOp op1 _ _) (MMultiOp op2 _)  = opCompare op1 op2
-    --compare (MMultiOp op1 _) (MMultiOp op2 _) = opCompare op1 op2
-    --compare (MMultiOp op1 _) (MBiOp op2 _ _)  = opCompare op1 op2
-    --compare (MMultiOp _ _) _                  = GT
-    --compare (MBiOp _ _ _) _                   = GT
-    --compare (MUnOp _ x) y                     = compare x y
-    --compare x (MUnOp _ y)                     = compare x y
-    --compare _ (MMultiOp _ _)                  = LT
-    --compare _ (MBiOp _ _ _)                   = LT
     compare (MOp "-" [x]) y = compare x y
     compare x (MOp "-" [y]) = compare x y
 
+    compare (MOp "^" [x1, x2]) (MOp "^" [y1, y2]) = compare x2 y2 `ifEq` compare x1 y1
+
     compare (MOp x xs) (MOp y ys) | isInfix x && isInfix y = compare (percedence y) (percedence x)
                                                              `ifEq` getOrd (zipWith compare xs ys)
+                                  | otherwise = compare x y `ifEq` compare xs ys
 
     compare MOp{} _ = GT
     compare _ MOp{} = LT
@@ -95,21 +87,19 @@ instance Ord a => Ord (MExpression a) where
     compare (MConst x) (MConst y) = EQ
     compare (MConst x) _ = GT
     compare _ (MConst x) = LT
-    compare (MVar x) (MVar y) | x == y = EQ
-                              | x < y  = GT
-                              | otherwise = LT
+    compare (MVar x) (MVar y) = compare y x
     compare (MVar x) _ = GT
     compare _ (MVar x) = LT
     compare (MNum x) (MNum y) = compare x y
 
 
-flatten :: MExpression a -> MExpression a
-flatten (MOp "+" xs) = MOp "+" . concat $ flatten' <$> xs
+flatten :: (Ord a) => MExpression a -> MExpression a
+flatten (MOp "+" xs) = MOp "+" . (sortBy $ flip compare) . concat $ flatten' <$> xs
     where
         flatten' (MOp "+" xs) = xs
         flatten' y = [y]
 
-flatten (MOp "*" xs) = MOp "*" . concat $ flatten' <$> xs
+flatten (MOp "*" xs) = MOp "*" . sort . concat $ flatten' <$> xs
     where
         flatten' (MOp "*" xs) = xs
         flatten' y = [y]
@@ -134,23 +124,21 @@ eqTerm (MVar x) (MVar y) = x == y
 eqTerm (MOp x xs) (MOp y ys) = x == y && and (zipWith eqTerm xs ys)
 eqTerm _ _ = False
 
-
 instance (Ord a, Fractional a) => Num (MExpression a) where
-    x + y = traverseM getTerm . flatten $ MOp "+" [x, y]
-    x - y = traverseM getTerm . flatten $ MOp "+" [x, negate y]
-    x * y = traverseM getTerm . flatten $ MOp "*" [x, y]
-    --x + y = calc 0x01 x y
-    --x - y = calc 0x02 x y
-    --x * y = calc 0x03 x y
+    x + y = calculate . flatten $ MOp "+" [x, y]
+    x - y = calculate . flatten $ MOp "+" [x, negate y]
+    (MOp "/" [a, b]) * c = calculate $ (a*c) / b
+    a * (MOp "/" [b, c]) = calculate $ (a*b) / c
+    x * y = calculate . flatten $ MOp "*" [x, y]
     abs x    = MOp "abs" [x]
     negate x = MOp "-" [x]
     signum x = MOp "signum" [x]
-    --abs x = MUnOp 0x05 x
-    --negate x = MUnOp 0x02 x
-    --signum x = MUnOp 0x31 x
     fromInteger x = MNum (fromInteger x)
 
 instance (Ord a, Fractional a) => Fractional (MExpression a) where
+    (MOp "/" [x1, y1]) / (MOp "/" [x2, y2]) = calculate $ MOp "/" [x1*x2, y1*y2]
+    (MOp "/" [a, b]) / c = calculate $ MOp "/" [a, b*c]
+    a / (MOp "/" [b, c]) = calculate $ MOp "/" [a*b, c]
     x / y = MOp "/" [x, y]
     fromRational x = MNum (fromRational x)
 
@@ -173,3 +161,40 @@ instance (Ord a, Fractional a) => Floating (MExpression a) where
     asinh x = MOp "asinh" [x]
     acosh x = MOp "acosh" [x]
     atanh x = MOp "atanh" [x]
+
+isNumeric :: (MExpression a) -> Bool
+isNumeric (MNum _) = True
+isNumeric (MOp "-" [MNum _]) = True
+isNumeric _ = False
+
+
+sameType :: MExpression a -> MExpression a -> Bool
+sameType x y = isNumeric x && isNumeric y
+
+
+extractNumeric :: (Num a) => MExpression a -> a
+extractNumeric (MNum a) = a
+extractNumeric (MOp "-" [MNum x]) = -x
+extractNumeric _ = error "Not a numeric"
+
+calculate :: (Fractional a, Ord a) => MExpression a -> MExpression a
+calculate (MOp "+" xs) | all isNumeric $ fmap calculate xs = MNum . sum $ fmap (extractNumeric . calculate) xs
+calculate (MOp "+" xs)  = MOp "+" . concatMap (\x -> if all isNumeric x then [MNum . sum $ fmap extractNumeric x] else x) . groupBy sameType . sort $ fmap calculate xs
+
+calculate (MOp "*" xs) | all isNumeric $ fmap calculate xs = MNum . product $ fmap (extractNumeric . calculate) xs
+calculate (MOp "*" xs)  = MOp "*" . concatMap (\x -> if all isNumeric x then [MNum . product $ fmap extractNumeric x] else x) . groupBy sameType . sort $ fmap calculate xs
+
+calculate (MOp "/" xs) | all isNumeric $ fmap calculate xs = MNum . foldr (/) 1 $ fmap (extractNumeric . calculate) xs
+calculate (MOp "/" xs)  = MOp "/" . concatMap (\x -> if all isNumeric x then [MNum . foldr (/) 1 $ fmap extractNumeric x] else x) . groupBy sameType . sort $ fmap calculate xs
+
+calculate (MOp op xs) = MOp op $ fmap calculate xs
+calculate x = x
+
+
+
+a = MVar "a"
+b = MVar "b"
+c = MVar "c"
+d = MVar "d"
+e = MVar "e"
+f = MVar "f"
