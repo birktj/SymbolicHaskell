@@ -18,6 +18,15 @@ data Math a = Numeric a
             deriving (Eq)
 
 
+
+percedende :: Text -> Int
+percedende "+" = 1
+percedende "-" = 1
+percedende "*" = 2
+percedende "/" = 2
+percedende "^" = 3
+percedende _ = 3
+
 instance Show a => Show (Math a) where
     show (Numeric x) = show x
     show (Sym str) = T.unpack str
@@ -42,7 +51,7 @@ instance (Ord a, Fractional a) => Num (Math a) where
     x - y = Op "+" [x, Numeric (-1) * y]
     x * y = Op "*" [x, y]
     abs x    = Op "abs" [x]
-    negate x = Op "-" [x]
+    negate x = Numeric (-1) * x
     signum x = Op "signum" [x]
     fromInteger x = Numeric (fromInteger x)
 

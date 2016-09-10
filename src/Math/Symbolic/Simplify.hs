@@ -2,6 +2,7 @@
 module Math.Symbolic.Simplify where
 
 import Math.Symbolic.Expression
+import Math.Symbolic.Display
 --import Math.Symbolic.Rules
 
 import Data.Word
@@ -34,13 +35,6 @@ converge p (x:ys@(y:_))
 runFun :: (Eq a) => (a -> a) -> a -> a
 runFun f a = converge (==) $ iterate f a
 
-percedende :: Text -> Int
-percedende "+" = 1
-percedende "-" = 1
-percedende "*" = 2
-percedende "/" = 2
-percedende "^" = 3
-percedende _ = 3
 
 opCompare :: Text -> Text -> Ordering
 opCompare x y | percedende x == percedende y = EQ
@@ -166,8 +160,8 @@ reduce x = x
 
 
 foldConst :: (Ord a, Fractional a) => Math a -> Math a
-foldConst (Op "+" xs) = Op "+" . concatMap (\x -> if all isNumeric xs then [Numeric . sum $ getNumeric <$> xs] else x) . groupBy sameType $ foldConst <$> xs
-foldConst (Op "*" xs) = Op "*" . concatMap (\x -> if all isNumeric xs then [Numeric . product $ getNumeric <$> xs] else x) . groupBy sameType $ foldConst <$> xs
+foldConst (Op "+" xs) = Op "+" . concatMap (\x -> if all isNumeric x then [Numeric . sum $ getNumeric <$> x] else x) . groupBy sameType $ foldConst <$> xs
+foldConst (Op "*" xs) = Op "*" . concatMap (\x -> if all isNumeric x then [Numeric . product $ getNumeric <$> x] else x) . groupBy sameType $ foldConst <$> xs
 foldConst (Op op xs) = Op op $ foldConst <$> xs
 foldConst x = x
 
@@ -203,6 +197,7 @@ simplify = runFun simplify' . mathSort
         simplify' = mathSort
                   . likeTerms
                   . runFun reduce
+                  . mathSort
                   . runFun simplifyRational
                   . runFun level
                  -- . toSTerm
