@@ -191,6 +191,14 @@ sameType (Op x _) (Op y _)   = x == y
 sameType _ _ = False
 
 
+expand :: (Ord a, Fractional a) => Math a -> Math a
+expand (Op "*" xs) = reduce . Op "+" . fmap (Op "*") . mapM fromSum $ expand <$> xs
+    where
+        fromSum (Op "+" xs) = xs
+        fromSum x = [x]
+expand a = a
+
+
 likeTerms :: (Ord a, Fractional a) => Math a -> Math a
 likeTerms = runFun reduce
           . collectSLike
@@ -208,5 +216,6 @@ simplify = runFun simplify' . mathSort
                   . runFun reduce
                   . mathSort
                   . runFun simplifyRational
+                  . expand
                   . runFun level
                  -- . toSTerm

@@ -27,10 +27,47 @@ percedende "/" = 2
 percedende "^" = 3
 percedende _ = 3
 
-instance Show a => Show (Math a) where
-    show (Numeric x) = show x
-    show (Sym str) = T.unpack str
-    show (Op op xs) = T.unpack op <> show xs
+instance (Show a, Fractional a, Ord a) => Show (Math a) where
+    show = showMath . toTree
+
+
+toTree :: (Show a, Fractional a, Ord a) => Math a -> Math a
+toTree (Op "*" xs) = foldr1 (*) $ toTree <$> xs
+toTree (Op "+" xs) = foldl1 sumTree $ toTree <$> xs
+    where
+        sumTree y (Op "*" [Numeric (-1), x]) = Op "-" [y, x]
+        sumTree y (Op "*" (Numeric x:xs)) | x < 0 = Op "-" [y, Op "*" $ (Numeric $ abs x):xs]
+        sumTree y (Numeric x) | x < 0 = Op "-" [y, Numeric $ abs x]
+        sumTree x y = x + y
+toTree (Op op x) = Op op $ toTree <$> x
+toTree x = x
+
+parens :: (Show a, Fractional a, Ord a) => Int -> Math a -> String
+parens p (Op "*" [Numeric (-1), x]) | 1 > p = "-(" <> showMath x <> ")"
+                         -- | otherwise = "(" <> showMath x <> ")"
+parens p x@(Op op _) | percedende op < p = "(" <> showMath x <> ")"
+parens _ (Numeric x) | x < 0 = "-" <> show (abs x)
+parens _ x = showMath x
+
+isNeg :: (Show a, Fractional a, Ord a) => Math a -> Bool
+isNeg (Op "*" (Numeric (-1):_)) = True
+isNeg (Numeric x) = x < 0
+isNeg _ = False
+
+getNeg :: (Show a, Fractional a, Ord a) => Math a -> Math a
+getNeg (Op "*" [_, x]) = x
+getNeg x = x
+
+sig :: (Show a, Fractional a, Ord a) => Math a -> String
+sig (Op "*" (Numeric (-1):_)) = "-"
+sig (Numeric x) | x < 0 = "-"
+sig _ = ""
+
+showMath :: (Show a, Fractional a, Ord a) => Math a -> String
+showMath (Op op [x]) = T.unpack  op <> "(" <> showMath x <> ")"
+showMath (Op op xs) = intercalate (T.unpack op) $ parens (percedende op) <$> xs
+showMath (Sym x) = T.unpack x
+showMath (Numeric x) = show $ abs x
 
 
 ifEq :: Ordering -> Ordering -> Ordering
