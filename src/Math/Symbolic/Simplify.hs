@@ -155,6 +155,15 @@ reduce (Op "*" [x]) = x
 reduce (Op "^" [x, 1]) = reduce x
 reduce (Op "*" (1:xs)) = reduce . Op "*" $ reduce <$> xs
 reduce (Op "*" (0:_))  = Numeric 0
+reduce (Op "+" xs) = case xs' of
+    [] -> Numeric 0
+    [a] -> a
+    a -> Op "+" a
+    where
+        xs' = concatMap removeNull $ reduce <$> xs
+        removeNull (Numeric 0) = []
+        removeNull x = [x]
+
 reduce (Op op xs) = foldConst . Op op $ reduce <$> xs
 reduce x = x
 
