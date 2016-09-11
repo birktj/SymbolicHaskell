@@ -15,6 +15,6 @@ import Math.Symbolic.Simplify
 
 main = do
     let x = Sym "x"
-    print . simplify $ x^2 + 5 + x^2 + x*
+    print . simplify $ x^2 + 5 + x^2 + x*x
     -- 3.0*x^2.0+5.0
 ```
