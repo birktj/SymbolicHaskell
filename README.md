@@ -10,7 +10,7 @@ also planned.
 # Example
 
 ```haskell
-{-# LANGUAGE OverloadedStrings-}
+{-# LANGUAGE OverloadedStrings #-}
 import Math.Symbolic.Simplify
 
 main = do
