@@ -9,6 +9,7 @@ import Data.Word
 import Data.Maybe
 import Data.List
 import Data.Monoid
+import Data.Ratio
 import Control.Arrow
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -168,9 +169,10 @@ reduce (Op op xs) = foldConst . Op op $ reduce <$> xs
 reduce x = x
 
 
-foldConst :: (Ord a, Fractional a) => Math a -> Math a
+foldConst :: (Ord a, Real a, Fractional a) => Math a -> Math a
 foldConst (Op "+" xs) = Op "+" . concatMap (\x -> if all isNumeric x then [Numeric . sum $ getNumeric <$> x] else x) . groupBy sameType $ foldConst <$> xs
 foldConst (Op "*" xs) = Op "*" . concatMap (\x -> if all isNumeric x then [Numeric . product $ getNumeric <$> x] else x) . groupBy sameType $ foldConst <$> xs
+foldConst (Op "^" [Numeric x, Numeric y]) | denominator (toRational y) == 1 = Numeric $ x ^ numerator (toRational y)
 foldConst (Op op xs) = Op op $ foldConst <$> xs
 foldConst x = x
 
@@ -196,6 +198,8 @@ expand (Op "*" xs) = reduce . Op "+" . fmap (Op "*") . mapM fromSum $ expand <$>
     where
         fromSum (Op "+" xs) = xs
         fromSum x = [x]
+expand (Op "^" [Op "*" xs, y]) = Op "*" $ (\x -> Op "^" [x, y]) . expand <$> xs
+expand (Op op xs) = Op op $ expand <$> xs
 expand a = a
 
 
@@ -208,10 +212,11 @@ likeTerms = runFun reduce
           . toMTerm
 
 
-simplify :: (Ord a, Fractional a) => Math a -> Math a
+simplify :: (Ord a, Real a, Fractional a) => Math a -> Math a
 simplify = runFun simplify' . mathSort
     where
         simplify' = mathSort
+                  . runFun level
                   . likeTerms
                   . runFun reduce
                   . mathSort

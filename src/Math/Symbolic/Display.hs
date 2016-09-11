@@ -18,4 +18,4 @@ import Data.Text (Text)
 showMathAST :: (Show a) => Math a -> String
 showMathAST (Sym x)     = T.unpack x
 showMathAST (Numeric x) = show x
-showMathAST (Op op xs)  = "[" <> T.unpack op <> " " <> intercalate ", " (showMathAST <$> xs) <> "]" 
+showMathAST (Op op xs)  = "[" <> T.unpack op <> " " <> intercalate ", " (showMathAST <$> xs) <> "]"

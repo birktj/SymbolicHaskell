@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, GADTs, StandaloneDeriving #-}
 module Math.Symbolic.Expression where
 
 import Data.Word
@@ -12,10 +12,13 @@ import qualified Data.Text as T
 import Data.Text (Text)
 
 
-data Math a = Numeric a
-            | Op Text [Math a]
-            | Sym Text
-            deriving (Eq)
+data Math a where
+    Numeric :: (Show a, Real a, Fractional a, Ord a, Eq a) => a -> Math a
+    Op :: (Show a, Real a, Fractional a, Ord a, Eq a) => Text -> [Math a] -> Math a
+    Sym :: (Show a, Real a, Fractional a, Ord a, Eq a) => Text -> Math a
+
+
+deriving instance Eq a => Eq (Math a)
 
 
 
@@ -27,11 +30,11 @@ percedende "/" = 2
 percedende "^" = 3
 percedende _ = 3
 
-instance (Show a, Fractional a, Ord a) => Show (Math a) where
+instance (Show a, Fractional a, Real a, Ord a) => Show (Math a) where
     show = showMath . toTree
 
 
-toTree :: (Show a, Fractional a, Ord a) => Math a -> Math a
+toTree :: (Show a, Real a, Fractional a, Ord a) => Math a -> Math a
 toTree (Op "*" xs) = foldr1 (*) $ toTree <$> xs
 toTree (Op "+" xs) = foldl1 sumTree $ toTree <$> xs
     where
@@ -83,7 +86,7 @@ instance (Ord a) => Ord (Math a) where
     compare _ Sym{} = LT
     compare (Numeric x) (Numeric y) = compare x y
 
-instance (Ord a, Fractional a) => Num (Math a) where
+instance (Ord a, Real a, Fractional a, Show a) => Num (Math a) where
     x + y = Op "+" [x, y]
     x - y = Op "+" [x, Numeric (-1) * y]
     x * y = Op "*" [x, y]
@@ -92,11 +95,11 @@ instance (Ord a, Fractional a) => Num (Math a) where
     signum x = Op "signum" [x]
     fromInteger x = Numeric (fromInteger x)
 
-instance (Ord a, Fractional a) => Fractional (Math a) where
+instance (Ord a, Real a, Fractional a, Show a) => Fractional (Math a) where
     x / y = Op "/" [x, y]
     fromRational x = Numeric (fromRational x)
 
-instance (Ord a, Fractional a) => Floating (Math a) where
+instance (Ord a, Real a, Fractional a, Show a) => Floating (Math a) where
     x ** y = Op "^" [x, y]
 
     pi = Sym "pi"
