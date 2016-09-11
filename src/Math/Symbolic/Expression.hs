@@ -124,12 +124,3 @@ instance (Ord a, Real a, Fractional a, Show a) => Floating (Math a) where
     asinh x = Op "asinh" [x]
     acosh x = Op "acosh" [x]
     atanh x = Op "atanh" [x]
-
-
-
-a = Sym "a"
-b = Sym "b"
-c = Sym "c"
-d = Sym "d"
-e = Sym "e"
-f = Sym "f"
