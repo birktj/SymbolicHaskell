@@ -26,26 +26,26 @@ onlyNumeric sym x | sym == x = False
 onlyNumeric sym (Op _ xs) = and $ onlyNumeric sym <$> xs
 onlyNumeric sym _ = True
 
-funDifferentiate :: (Ord a, Real a, Fractional a) => Text -> Math a -> Math a
-funDifferentiate "ln" expr = 1 / expr
-funDifferentiate "sqrt"  expr = 1 / (2 * sqrt expr)
-funDifferentiate fun expr = Op "D" [Op fun [expr]]
+funDiff :: (Ord a, Real a, Fractional a) => Text -> Math a -> Math a
+funDiff "ln" expr = 1 / expr
+funDiff "sqrt"  expr = 1 / (2 * sqrt expr)
+funDiff fun expr = Op "D" [Op fun [expr]]
 
-differentiate' :: (Ord a, Real a, Fractional a) => Math a -> Math a -> Math a
-differentiate' sym x | onlyNumeric sym x = 0
+diff' :: (Ord a, Real a, Fractional a) => Math a -> Math a -> Math a
+diff' sym x | onlyNumeric sym x = 0
                      | sym == x = 1
-differentiate' sym (Op "+" xs) = Op "+" $ differentiate' sym <$> xs
-differentiate' sym (Op "*" xs) = Op "+" . fmap (Op "*") $ listMod (differentiate' sym) xs
-differentiate' sym (Op "/" [x, y]) = (differentiate' sym x * y + differentiate' sym y * x) / y^2
-differentiate' sym (Op op [x]) = funDifferentiate op x * differentiate' sym x
---differentiate' sym (Op "^" [x, y]) | onlyNumeric sym x =
---differentiate' sym (Op "^" [x, y]) = y * x**(y-1) * differentiate' sym x
-differentiate' sym (Op "^" [b, e]) = b**e * differentiate' sym (e * Op "ln" [b])
-differentiate' sym x = Op "D" [x]
+diff' sym (Op "+" xs) = Op "+" $ diff' sym <$> xs
+diff' sym (Op "*" xs) = Op "+" . fmap (Op "*") $ listMod (diff' sym) xs
+diff' sym (Op "/" [x, y]) = (diff' sym x * y + diff' sym y * x) / y^2
+diff' sym (Op op [x]) = funDiff op x * diff' sym x
+--diff' sym (Op "^" [x, y]) | onlyNumeric sym x =
+--diff' sym (Op "^" [x, y]) = y * x**(y-1) * diff' sym x
+diff' sym (Op "^" [b, e]) = b**e * diff' sym (e * Op "ln" [b])
+diff' sym x = Op "D" [x]
 
 
 
-differentiate :: (Ord a, Real a, Fractional a) => Math a -> Math a -> Math a
-differentiate sym = simplify
-                  . differentiate' sym
+diff :: (Ord a, Real a, Fractional a) => Math a -> Math a -> Math a
+diff sym = simplify
+                  . diff' sym
                   . simplify

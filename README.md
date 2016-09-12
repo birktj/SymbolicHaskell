@@ -30,7 +30,7 @@ main = do
     print $ simplify expr
     -- 3.0*x^2.0+5.0
 
-    print $ differentiate x expr
+    print $ diff x expr
     -- 6.0*x
 
     putStrLn . showMathAST $ simplify expr
