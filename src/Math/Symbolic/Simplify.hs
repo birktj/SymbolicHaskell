@@ -2,8 +2,6 @@
 module Math.Symbolic.Simplify where
 
 import Math.Symbolic.Expression
-import Math.Symbolic.Display
---import Math.Symbolic.Rules
 
 import Data.Word
 import Data.Maybe
@@ -86,7 +84,7 @@ level (Op op xs) = Op op $ level <$> xs
 
 level x = x
 
-simplifyRational :: (Ord a, Fractional a) => Math a -> Math a
+simplifyRational :: (Ord a, Fractional a, Real a) => Math a -> Math a
 simplifyRational (Op "/" [Op "/" [a, b], c]) = a / (b*c)
 simplifyRational (Op "/" [a, Op "/" [b, c]]) = (a*b) / c
 simplifyRational (Op "*" xs) | any (isOp "/") xs = let (as, Op "/" [b, c]) = takeOp "/" xs
@@ -96,7 +94,7 @@ simplifyRational x = x
 
 
 
-toMTerm :: (Ord a, Fractional a) => Math a -> Math a
+toMTerm :: (Ord a, Fractional a, Real a) => Math a -> Math a
 toMTerm (Op "*" xs) = Op "*" $ toMTerm' . toMTerm <$> xs
     where
         toMTerm' x@(Op "^" _)  = x
@@ -106,7 +104,7 @@ toMTerm (Op op xs)  = Op op $ toMTerm <$> xs
 toMTerm x = x
 
 
-toSTerm :: (Ord a, Fractional a) => Math a -> Math a
+toSTerm :: (Ord a, Fractional a, Real a) => Math a -> Math a
 toSTerm (Op "+" xs) = Op "+" $ toSTerm' . toSTerm <$> xs
     where
 
@@ -118,17 +116,17 @@ toSTerm (Op op xs)  = Op op $ toSTerm <$> xs
 toSTerm x = x
 
 
-likeMTerm :: (Ord a, Fractional a) => Math a -> Math a -> Bool
+likeMTerm :: (Ord a, Fractional a, Real a) => Math a -> Math a -> Bool
 likeMTerm (Op "^" [x, xs]) (Op "^" [y, ys]) = x == y
 likeMTerm _ _ = False
 
 
-likeSTerm :: (Ord a, Fractional a) => Math a -> Math a -> Bool
+likeSTerm :: (Ord a, Fractional a, Real a) => Math a -> Math a -> Bool
 likeSTerm (Op "*" (Numeric _ :xs)) (Op "*" (Numeric _:ys)) = xs == ys
 likeSTerm _ _ = False
 
 
-collectMLike :: (Ord a, Fractional a) => Math a -> Math a
+collectMLike :: (Ord a, Fractional a, Real a) => Math a -> Math a
 collectMLike (Op "*" xs) = Op "*" . concatMap addlike . groupBy likeMTerm $ collectMLike <$> xs
     where
         addlike (Op "^" [x, y] : xs) = [x ** foldr1 (+) (y:fmap getExponent xs)]
@@ -139,7 +137,7 @@ collectMLike (Op op xs) = Op op $ collectMLike <$> xs
 collectMLike x = x
 
 
-collectSLike :: (Ord a, Fractional a) => Math a -> Math a
+collectSLike :: (Ord a, Fractional a, Real a) => Math a -> Math a
 collectSLike (Op "+" xs) = Op "+" . concatMap addlike . groupBy likeSTerm $ collectSLike <$> xs
     where
         addlike (Op "*" (x@(Numeric _):xs) : ys) = [foldr1 (+) (x:fmap getNumeric ys) * (foldr1 (*) xs)]
@@ -150,12 +148,13 @@ collectSLike (Op op xs) = Op op $ collectSLike <$> xs
 collectSLike x = x
 
 
-reduce :: (Ord a, Fractional a) => Math a -> Math a
+reduce :: (Ord a, Fractional a, Real a) => Math a -> Math a
 reduce (Op "+" [x]) = x
 reduce (Op "*" [x]) = x
 reduce (Op "^" [x, 1]) = reduce x
 reduce (Op "*" (1:xs)) = reduce . Op "*" $ reduce <$> xs
 reduce (Op "*" (0:_))  = Numeric 0
+reduce (Op "/" (0:_))  = Numeric 0
 reduce (Op "+" xs) = case xs' of
     [] -> Numeric 0
     [a] -> a
@@ -193,7 +192,7 @@ sameType (Op x _) (Op y _)   = x == y
 sameType _ _ = False
 
 
-expand :: (Ord a, Fractional a) => Math a -> Math a
+expand :: (Ord a, Fractional a, Real a) => Math a -> Math a
 expand (Op "*" xs) = reduce . Op "+" . fmap (Op "*") . mapM fromSum $ expand <$> xs
     where
         fromSum (Op "+" xs) = xs
@@ -203,7 +202,7 @@ expand (Op op xs) = Op op $ expand <$> xs
 expand a = a
 
 
-likeTerms :: (Ord a, Fractional a) => Math a -> Math a
+likeTerms :: (Ord a, Fractional a, Real a) => Math a -> Math a
 likeTerms = runFun reduce
           . collectSLike
           . toSTerm
@@ -213,14 +212,16 @@ likeTerms = runFun reduce
 
 
 simplify :: (Ord a, Real a, Fractional a) => Math a -> Math a
-simplify = runFun simplify' . mathSort
+simplify = runFun simplify'
     where
         simplify' = mathSort
+                  . foldConst
                   . runFun level
                   . likeTerms
                   . runFun reduce
                   . mathSort
                   . runFun simplifyRational
                   . expand
+                  . mathSort
                   . runFun level
                  -- . toSTerm
