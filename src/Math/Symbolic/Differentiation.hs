@@ -21,29 +21,31 @@ listMod f xs = listMod' f xs []
         listMod' f [] ys = []
 
 
-onlyNumeric :: Text -> Math a -> Bool
+onlyNumeric :: (Eq a) => Math a -> Math a -> Bool
+onlyNumeric sym x | sym == x = False
 onlyNumeric sym (Op _ xs) = and $ onlyNumeric sym <$> xs
-onlyNumeric sym (Sym x) | sym == x = False
 onlyNumeric sym _ = True
 
 funDifferentiate :: (Ord a, Real a, Fractional a) => Text -> Math a -> Math a
-funDifferentiate "lg" expr = 1 / expr
+funDifferentiate "ln" expr = 1 / expr
 funDifferentiate "sqrt"  expr = 1 / (2 * sqrt expr)
 funDifferentiate fun expr = Op "D" [Op fun [expr]]
 
-differentiate' :: (Ord a, Real a, Fractional a) => Text -> Math a -> Math a
+differentiate' :: (Ord a, Real a, Fractional a) => Math a -> Math a -> Math a
 differentiate' sym x | onlyNumeric sym x = 0
+                     | sym == x = 1
 differentiate' sym (Op "+" xs) = Op "+" $ differentiate' sym <$> xs
 differentiate' sym (Op "*" xs) = Op "+" . fmap (Op "*") $ listMod (differentiate' sym) xs
 differentiate' sym (Op "/" [x, y]) = (differentiate' sym x * y + differentiate' sym y * x) / y^2
 differentiate' sym (Op op [x]) = funDifferentiate op x * differentiate' sym x
-differentiate' sym (Op "^" [x, y]) = y * x**(y-1) * differentiate' sym x
-differentiate' sym (Sym x) | sym == x = 1
+--differentiate' sym (Op "^" [x, y]) | onlyNumeric sym x =
+--differentiate' sym (Op "^" [x, y]) = y * x**(y-1) * differentiate' sym x
+differentiate' sym (Op "^" [b, e]) = b**e * differentiate' sym (e * Op "ln" [b])
 differentiate' sym x = Op "D" [x]
 
 
 
-differentiate :: (Ord a, Real a, Fractional a) =>  Text -> Math a -> Math a
+differentiate :: (Ord a, Real a, Fractional a) => Math a -> Math a -> Math a
 differentiate sym = simplify
                   . differentiate' sym
                   . simplify
