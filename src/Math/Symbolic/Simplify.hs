@@ -100,6 +100,7 @@ toMTerm (Op "*" xs) = Op "*" $ toMTerm' . toMTerm <$> xs
         toMTerm' x@(Op "^" _)  = x
     --    toMTerm' x@(Numeric _) = x
         toMTerm' x = x**1
+toMTerm (Op "/" [x, y]) = (toMTerm . level $ Op "*" [x]) / (toMTerm . level $ Op "*" [y])
 toMTerm (Op op xs)  = Op op $ toMTerm <$> xs
 toMTerm x = x
 
@@ -133,6 +134,19 @@ collectMLike (Op "*" xs) = Op "*" . concatMap addlike . groupBy likeMTerm $ coll
         addlike x = x
         getExponent (Op "^" [_, y]) = y
 
+collectMLike (Op "/" [Op "*" x, Op "*" y]) = Op "*" x' / Op "*" y'
+    where
+        (x', y') = reduceFraction (collectMLike <$> x) (collectMLike <$> y)
+        reduceFraction (x:xs) ys = let y' = find (likeMTerm x) ys
+                                   in case y' of
+                                       Just y -> let (x'', y'') = diffMterm x y
+                                                     (xs', ys') = reduceFraction xs ys
+                                                 in (x'':xs', y'': delete y ys')
+                                       Nothing -> let (xs', ys') = reduceFraction xs ys
+                                                  in (x:xs', ys')
+        reduceFraction [] ys = ([], ys)
+        diffMterm (Op "^" [x, xs]) (Op "^" [y, ys]) = (x**(xs-ys), y**(ys-(xs-ys)))
+
 collectMLike (Op op xs) = Op op $ collectMLike <$> xs
 collectMLike x = x
 
@@ -149,12 +163,17 @@ collectSLike x = x
 
 
 reduce :: (Ord a, Fractional a, Real a) => Math a -> Math a
-reduce (Op "+" [x]) = x
-reduce (Op "*" [x]) = x
+reduce (Op "+" [x]) = reduce x
+reduce (Op "*" [x]) = reduce x
 reduce (Op "^" [x, 1]) = reduce x
-reduce (Op "*" (1:xs)) = reduce . Op "*" $ reduce <$> xs
-reduce (Op "*" (0:_))  = Numeric 0
-reduce (Op "/" (0:_))  = Numeric 0
+reduce (Op "^" [x, 0]) = Numeric 1
+reduce (Op "*" xs) | 0 `elem` xs = Numeric 0
+                   | otherwise = case filter (/=1) xs of
+                       [] -> Numeric 1
+                       [x] -> x
+                       xs -> Op "*" $ reduce <$> xs
+reduce (Op "/" [0, _]) = Numeric 0
+reduce (Op "/" [x, 1]) = x
 reduce (Op "+" xs) = case xs' of
     [] -> Numeric 0
     [a] -> a
@@ -212,16 +231,17 @@ likeTerms = runFun reduce
 
 
 simplify :: (Ord a, Real a, Fractional a) => Math a -> Math a
-simplify = runFun simplify'
+simplify = simplify'
     where
         simplify' = mathSort
+                  . expand
                   . foldConst
+                  . runFun simplifyRational
                   . runFun level
                   . likeTerms
                   . runFun reduce
                   . mathSort
                   . runFun simplifyRational
-                  . expand
                   . mathSort
                   . runFun level
                  -- . toSTerm
