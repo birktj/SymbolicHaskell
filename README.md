@@ -8,7 +8,7 @@ Symbolic Haskell aims to provide a DSL for symbolic calculations in Haskell.
 
 Currently the system supports basic simplification and differentiation.
 SymbolicHaskell simplifies in a way resembling Yacas in that expressions are
-expanded before simplification and the result is not simpler.
+expanded before simplification and the result is not always simpler.
 
 # Example
 
