@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Math.Symbolic.Expression (Math(..), toTree) where
 
 import Data.Word
@@ -7,6 +7,7 @@ import Data.List
 import Data.Ratio
 import Data.String
 import Data.Monoid
+import Data.Generics (Typeable, Data)
 import Control.Arrow
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -15,7 +16,7 @@ import Data.Text (Text)
 data Math a = Numeric a
             | Sym Text
             | Op Text [Math a]
-            deriving (Eq)
+            deriving (Eq, Typeable, Data)
 
 
 

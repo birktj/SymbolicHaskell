@@ -20,6 +20,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Text.Parsec.Expr
 import Text.Parsec.Token
 import Text.Parsec.Language (javaStyle)
+import Data.Generics (Typeable, Data)
 
 
 lexer = makeTokenParser javaStyle
@@ -56,9 +57,25 @@ parseFunc = (\c n vs -> Op (T.pack $ c:n) vs)
           <*> many (letter <|> digit <|> msymbol)
           <*> parens lexer (commaSep lexer expr)
 
+parseExprMatch :: (Fractional a, Real a) => Parser (Math a)
+parseExprMatch = (\c -> Op "exprM" [Sym . T.pack $ 'a':c])
+             <$> (char '_' *> char 'a' *> many1 (letter <|> digit <|> msymbol))
+
+parseNumMatch :: (Fractional a, Real a) => Parser (Math a)
+parseNumMatch = (\c -> Op "numM" [Sym . T.pack $ 'n':c])
+            <$> (char '_' *> char 'n' *> many1 (letter <|> digit <|> msymbol))
+
+parseSymMatch :: (Fractional a, Real a) => Parser (Math a)
+parseSymMatch = (\c -> Op "symM" [Sym . T.pack $ 's':c])
+            <$> (char '_' *> char 's' *> many1 (letter <|> digit <|> msymbol))
+
+
 term :: (Fractional a, Real a) => Parser (Math a)
 term = try (parens lexer expr)
     <|> try parseFunc
+    <|> try parseExprMatch
+    <|> try parseNumMatch
+    <|> try parseSymMatch
     <|> try parseConst
     <|> try parseFloatNum
     <|> try parseIntNum
@@ -79,3 +96,22 @@ parseMath :: (Fractional a, Real a) => String -> Math a
 parseMath input = case parse expr "Math" input of
     Left err  -> 0
     Right val -> val
+
+
+parseExpr :: (Monad m, Fractional a, Real a, Typeable a, Data a) => (String, Int, Int) -> String -> m (Math a)
+parseExpr (file, line, col) s =
+    case runParser p () "" s of
+        Left err  -> fail $ show err
+        Right e   -> return e
+    where
+        p = do
+            pos <- getPosition
+            setPosition .
+                flip setSourceName file .
+                flip setSourceLine line .
+                flip setSourceColumn col $
+                pos
+            spaces
+            e <- expr
+            eof
+            return e
