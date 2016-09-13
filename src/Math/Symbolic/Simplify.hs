@@ -190,6 +190,10 @@ reduce x = x
 foldConst :: (Ord a, Real a, Fractional a) => Math a -> Math a
 foldConst (Op "+" xs) = Op "+" . concatMap (\x -> if all isNumeric x then [Numeric . sum $ getNumeric <$> x] else x) . groupBy sameType $ foldConst <$> xs
 foldConst (Op "*" xs) = Op "*" . concatMap (\x -> if all isNumeric x then [Numeric . product $ getNumeric <$> x] else x) . groupBy sameType $ foldConst <$> xs
+foldConst (Op "/" [x, y]) = foldConst' (foldConst x) (foldConst y)
+    where
+        foldConst' (Numeric x) (Numeric y) = Numeric $ x / y
+        foldConst' (Op "*" (Numeric x : xs)) (Op "*" (Numeric y : ys)) = Op "*" (Numeric (x / y) : xs) / (Op "*" ys) 
 foldConst (Op "^" [Numeric x, Numeric y]) | denominator (toRational y) == 1 = Numeric $ x ^ numerator (toRational y)
 foldConst (Op op xs) = Op op $ foldConst <$> xs
 foldConst x = x
