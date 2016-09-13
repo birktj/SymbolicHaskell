@@ -37,12 +37,14 @@ quoteExprExp s = do
                    fst (TH.loc_start loc),
                    snd (TH.loc_start loc))
         expr <- parseExpr pos s :: TH.Q (Math Rational) -- :: (Fractional a, Real a, Data a, Typeable a) => TH.Q (Math a)
-        dataToExpQ (const Nothing `extQ` antiExprExp `extQ` handleTextE) expr
+        dataToExpQ (const Nothing `extQ` antiExprExp `extQ` handleTextE `extQ` handleTypeE) expr
 
 
 handleTextE :: T.Text -> Maybe TH.ExpQ
 handleTextE x = Just . TH.appE (TH.varE 'T.pack) . TH.litE . TH.StringL $ T.unpack x
 
+handleTypeE :: Rational -> Maybe TH.ExpQ
+handleTypeE x = Just . TH.appE (TH.varE 'fromRational) . TH.litE $ TH.RationalL x
 
 antiExprExp :: Math Rational -> Maybe (TH.Q TH.Exp)
 antiExprExp  (Op "numM" [Sym v])  = Just $ TH.appE  (TH.conE (TH.mkName "Numeric"))
@@ -61,13 +63,15 @@ quoteExprPat s =  do
                    snd (TH.loc_start loc))
         expr <- parseExpr pos s :: TH.Q (Math Rational) --  :: (Fractional a, Real a, Data a, Typeable a) => TH.Q (Math a)
     --    expr' <- [|expr|]
-        dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP) expr -- (expr :: (Fractional a, Real a, Data a, Typeable a) => Math a)
+        dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP `extQ` handleTypeP) expr -- (expr :: (Fractional a, Real a, Data a, Typeable a) => Math a)
         --TH.sigP (dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP) expr) (TH.appT (TH.conT $ TH.mkName "Math" ) . TH.varT $ TH.mkName "a")
 
 
 handleTextP :: T.Text -> Maybe (TH.Q TH.Pat)
 handleTextP x = Just . TH.viewP (TH.varE 'T.unpack) . TH.litP . TH.StringL $ T.unpack x
 
+handleTypeP :: Rational -> Maybe TH.PatQ
+handleTypeP x = Just . TH.viewP (TH.varE 'toRational) . TH.litP $ TH.RationalL x
 
 antiExprPat ::  Math Rational -> Maybe (TH.Q TH.Pat)
 antiExprPat  (Op "numM" [Sym v])  = Just $ TH.conP (TH.mkName "Numeric")
