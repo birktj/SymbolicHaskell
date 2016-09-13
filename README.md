@@ -53,6 +53,7 @@ also be a challenge.
 - Improve differentiation
 - Improve Show instance
 - Create a parser
+- Create a quasiquotes parser 
 - Create a simpler way of defining rewrite rules
 - Create an evaluation monad
 - Create a latex renderer
