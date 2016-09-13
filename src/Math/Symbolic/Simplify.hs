@@ -145,7 +145,7 @@ collectMLike (Op "/" [Op "*" x, Op "*" y]) = Op "*" x' / Op "*" y'
                                        Nothing -> let (xs', ys') = reduceFraction xs ys
                                                   in (x:xs', ys')
         reduceFraction [] ys = ([], ys)
-        diffMterm (Op "^" [x, xs]) (Op "^" [y, ys]) = (x**(xs-ys), y**(ys-(xs-ys)))
+        diffMterm (Op "^" [x, xs]) (Op "^" [y, ys]) = (x**(xs-ys), 1 {-y**(ys-(xs-ys))-})
 
 collectMLike (Op op xs) = Op op $ collectMLike <$> xs
 collectMLike x = x
@@ -231,7 +231,7 @@ likeTerms = runFun reduce
 
 
 simplify :: (Ord a, Real a, Fractional a) => Math a -> Math a
-simplify = simplify'
+simplify = runFun simplify'
     where
         simplify' = mathSort
                   . expand
@@ -245,3 +245,5 @@ simplify = simplify'
                   . mathSort
                   . runFun level
                  -- . toSTerm
+
+x = Sym "x"
