@@ -193,7 +193,10 @@ foldConst (Op "*" xs) = Op "*" . concatMap (\x -> if all isNumeric x then [Numer
 foldConst (Op "/" [x, y]) = foldConst' (foldConst x) (foldConst y)
     where
         foldConst' (Numeric x) (Numeric y) = Numeric $ x / y
-        foldConst' (Op "*" (Numeric x : xs)) (Op "*" (Numeric y : ys)) = Op "*" (Numeric (x / y) : xs) / (Op "*" ys) 
+        foldConst' (Op "*" (Numeric x : xs)) (Op "*" (Numeric y : ys)) = Op "*" (Numeric (x / y) : xs) / (Op "*" ys)
+        foldConst' (Op "*" (Numeric x : xs)) (Numeric y) = Op "*" (Numeric (x / y) : xs)
+        foldConst' (Numeric x) (Op "*" (Numeric y : ys)) = Numeric (x / y) / (Op "*" ys)
+        foldConst' x y = x / y
 foldConst (Op "^" [Numeric x, Numeric y]) | denominator (toRational y) == 1 = Numeric $ x ^ numerator (toRational y)
 foldConst (Op op xs) = Op op $ foldConst <$> xs
 foldConst x = x
