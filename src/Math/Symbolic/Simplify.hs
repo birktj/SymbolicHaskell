@@ -170,10 +170,10 @@ reduce (Op "*" [x]) = reduce x
 reduce (Op "^" [x, 1]) = reduce x
 reduce (Op "^" [x, 0]) = Numeric 1
 reduce (Op "*" xs) | 0 `elem` xs = Numeric 0
-                   | otherwise = case filter (/=1) xs of
+                   | otherwise = case filter (/=1) $ reduce <$> xs of
                        [] -> Numeric 1
                        [x] -> x
-                       xs -> Op "*" $ reduce <$> xs
+                       xs -> Op "*" xs
 reduce (Op "/" [0, _]) = Numeric 0
 reduce (Op "/" [x, 1]) = x
 reduce (Op "+" xs) = case xs' of
