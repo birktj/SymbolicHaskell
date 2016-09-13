@@ -12,9 +12,11 @@ import Data.Ratio
 import Control.Arrow
 import qualified Data.Text as T
 import Data.Text (Text)
+import Control.Monad.IO.Class
 
 import Data.Generics
 import qualified Language.Haskell.TH as TH
+import qualified Language.Haskell.TH.Syntax as TH
 import Language.Haskell.TH.Quote
 
 
@@ -34,7 +36,7 @@ quoteExprExp s = do
         let pos = (TH.loc_filename loc,
                    fst (TH.loc_start loc),
                    snd (TH.loc_start loc))
-        expr <- parseExpr pos s :: Monad m => m (Math Rational)
+        expr <- parseExpr pos s :: TH.Q (Math Rational) -- :: (Fractional a, Real a, Data a, Typeable a) => TH.Q (Math a)
         dataToExpQ (const Nothing `extQ` antiExprExp `extQ` handleTextE) expr
 
 
@@ -57,8 +59,10 @@ quoteExprPat s =  do
         let pos =  (TH.loc_filename loc,
                    fst (TH.loc_start loc),
                    snd (TH.loc_start loc))
-        expr <- parseExpr pos s :: Monad m => m (Math Rational)
-        dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP) expr
+        expr <- parseExpr pos s :: TH.Q (Math Rational) --  :: (Fractional a, Real a, Data a, Typeable a) => TH.Q (Math a)
+    --    expr' <- [|expr|]
+        dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP) expr -- (expr :: (Fractional a, Real a, Data a, Typeable a) => Math a)
+        --TH.sigP (dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP) expr) (TH.appT (TH.conT $ TH.mkName "Math" ) . TH.varT $ TH.mkName "a")
 
 
 handleTextP :: T.Text -> Maybe (TH.Q TH.Pat)
