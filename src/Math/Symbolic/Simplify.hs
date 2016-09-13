@@ -133,19 +133,21 @@ collectMLike (Op "*" xs) = Op "*" . concatMap addlike . groupBy likeMTerm $ coll
         addlike (Op "^" [x, y] : xs) = [x ** foldr1 (+) (y:fmap getExponent xs)]
         addlike x = x
         getExponent (Op "^" [_, y]) = y
-
-collectMLike (Op "/" [Op "*" x, Op "*" y]) = Op "*" x' / Op "*" y'
+collectMLike (Op "/" [x, y]) = collectMLike' (collectMLike x) (collectMLike y)
     where
-        (x', y') = reduceFraction (collectMLike <$> x) (collectMLike <$> y)
-        reduceFraction (x:xs) ys = let y' = find (likeMTerm x) ys
-                                   in case y' of
-                                       Just y -> let (x'', y'') = diffMterm x y
-                                                     (xs', ys') = reduceFraction xs ys
-                                                 in (x'':xs', y'': delete y ys')
-                                       Nothing -> let (xs', ys') = reduceFraction xs ys
-                                                  in (x:xs', ys')
-        reduceFraction [] ys = ([], ys)
-        diffMterm (Op "^" [x, xs]) (Op "^" [y, ys]) = (x**(xs-ys), 1 {-y**(ys-(xs-ys))-})
+        collectMLike' (Op "*" x) (Op "*" y) = Op "*" x' / Op "*" y'
+            where
+                (x', y') = reduceFraction x y
+                reduceFraction (x:xs) ys = let y' = find (likeMTerm x) ys
+                                           in case y' of
+                                               Just y -> let (x'', y'') = diffMterm x y
+                                                             (xs', ys') = reduceFraction xs ys
+                                                         in (x'':xs', y'': delete y ys')
+                                               Nothing -> let (xs', ys') = reduceFraction xs ys
+                                                          in (x:xs', ys')
+                reduceFraction [] ys = ([], ys)
+                diffMterm (Op "^" [x, xs]) (Op "^" [y, ys]) = (x**(xs-ys), 1 {-y**(ys-(xs-ys))-})
+        collectMLike' x y = x / y
 
 collectMLike (Op op xs) = Op op $ collectMLike <$> xs
 collectMLike x = x
