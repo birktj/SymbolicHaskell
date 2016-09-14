@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell, ViewPatterns, QuasiQuotes #-}
-module Math.Symbolic.Q.QQ where
+module Math.Symbolic.M.QQ where
 
 import Math.Symbolic.Expression
 import Math.Symbolic.Simplify (level, runFun)
-import Math.Symbolic.Q.Parser
+import Math.Symbolic.M.Parser
 import Math.Symbolic.Display
 
 import Data.Word
@@ -14,7 +14,6 @@ import Data.Ratio
 import Control.Arrow
 import qualified Data.Text as T
 import Data.Text (Text)
-import Control.Monad.IO.Class
 
 import Data.Generics
 import qualified Language.Haskell.TH as TH
@@ -82,11 +81,17 @@ antiExprPat (Op "symM" [Sym v])  = Just $ TH.conP (TH.mkName "Sym")
                                                  [TH.varP (TH.mkName $ T.unpack v)]
 antiExprPat (Op "exprM" [Sym v]) = Just $ TH.varP (TH.mkName $ T.unpack v)
 antiExprPat (Op "listM" [Sym v]) = Just $ TH.varP (TH.mkName $ T.unpack v)
-antiExprPat (Op "+" xs) = Just $ do
+antiExprPat (Op "+:" xs) = Just $ do
     let (Op "+" xs'') = level' (Op "+" xs)
     xs' <- mapM (dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP `extQ` handleTypeP)) xs''
     TH.viewP (TH.varE 'level') $ TH.conP (TH.mkName "Op") [TH.viewP (TH.varE 'T.unpack) . TH.litP $ TH.StringL "+",
                                         return $ foldr1 (\x y -> TH.UInfixP x (TH.mkName ":") y) xs']
+antiExprPat (Op "*:" xs) = Just $ do
+    let (Op "*" xs'') = level' (Op "*" xs)
+    xs' <- mapM (dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP `extQ` handleTypeP)) xs''
+    TH.viewP (TH.varE 'level') $ TH.conP (TH.mkName "Op") [TH.viewP (TH.varE 'T.unpack) . TH.litP $ TH.StringL "*",
+                                        return $ foldr1 (\x y -> TH.UInfixP x (TH.mkName ":") y) xs']
+
 
 antiExprPat  _                = Nothing
 

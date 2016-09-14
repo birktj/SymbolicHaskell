@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Math.Symbolic.Q.Parser where
+module Math.Symbolic.M.Parser where
 
 import Math.Symbolic.Expression (Math(..))
 
@@ -90,7 +90,9 @@ table :: (Fractional a, Real a) => OperatorTable String () Identity (Math a)
 table = [ [binary "^" (**) AssocLeft],
           [prefix "-" negate],
           [binary "*" (*) AssocLeft, binary "/" (/) AssocLeft ],
-          [binary "+" (+) AssocLeft, binary "-" (-) AssocLeft ]
+          [binary "*:" (\x y -> Op "*:" [x, y]) AssocLeft],
+          [binary "+" (+) AssocLeft, binary "-" (-) AssocLeft ],
+          [binary "+:" (\x y -> Op "+:" [x, y]) AssocLeft]
         ]
 
 
