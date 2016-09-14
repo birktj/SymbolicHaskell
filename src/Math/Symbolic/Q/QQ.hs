@@ -2,7 +2,9 @@
 module Math.Symbolic.Q.QQ where
 
 import Math.Symbolic.Expression
+import Math.Symbolic.Simplify (level, runFun)
 import Math.Symbolic.Q.Parser
+import Math.Symbolic.Display
 
 import Data.Word
 import Data.Maybe
@@ -74,9 +76,20 @@ handleTypeP :: Rational -> Maybe TH.PatQ
 handleTypeP x = Just . TH.viewP (TH.varE 'toRational) . TH.litP $ TH.RationalL x
 
 antiExprPat ::  Math Rational -> Maybe (TH.Q TH.Pat)
-antiExprPat  (Op "numM" [Sym v])  = Just $ TH.conP (TH.mkName "Numeric")
+antiExprPat (Op "numM" [Sym v])  = Just $ TH.conP (TH.mkName "Numeric")
                                                  [TH.varP (TH.mkName $ T.unpack v)]
-antiExprPat  (Op "symM" [Sym v])  = Just $ TH.conP (TH.mkName "Sym")
+antiExprPat (Op "symM" [Sym v])  = Just $ TH.conP (TH.mkName "Sym")
                                                  [TH.varP (TH.mkName $ T.unpack v)]
-antiExprPat  (Op "exprM" [Sym v]) = Just $ TH.varP (TH.mkName $ T.unpack v)
+antiExprPat (Op "exprM" [Sym v]) = Just $ TH.varP (TH.mkName $ T.unpack v)
+antiExprPat (Op "listM" [Sym v]) = Just $ TH.varP (TH.mkName $ T.unpack v)
+antiExprPat (Op "+" xs) = Just $ do
+    let (Op "+" xs'') = level' (Op "+" xs)
+    xs' <- mapM (dataToPatQ (const Nothing `extQ` antiExprPat `extQ` handleTextP `extQ` handleTypeP)) xs''
+    TH.viewP (TH.varE 'level') $ TH.conP (TH.mkName "Op") [TH.viewP (TH.varE 'T.unpack) . TH.litP $ TH.StringL "+",
+                                        return $ foldr1 (\x y -> TH.UInfixP x (TH.mkName ":") y) xs']
+
 antiExprPat  _                = Nothing
+
+
+level' :: (Ord a) => Math a -> Math a
+level' = runFun level

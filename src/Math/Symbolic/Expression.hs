@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
-module Math.Symbolic.Expression (Math(..), toTree) where
+module Math.Symbolic.Expression  where
 
 import Data.Word
 import Data.Maybe

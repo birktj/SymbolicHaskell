@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Math.Symbolic.Q.Parser where
 
-import Math.Symbolic.Expression
+import Math.Symbolic.Expression (Math(..))
 
 import Data.Word
 import Data.Maybe
@@ -57,6 +57,11 @@ parseFunc = (\c n vs -> Op (T.pack $ c:n) vs)
           <*> many (letter <|> digit <|> msymbol)
           <*> parens lexer (commaSep lexer expr)
 
+parseListMatch :: (Fractional a, Real a) => Parser (Math a)
+parseListMatch = (\c -> Op "listM" [Sym . T.pack $ c])
+             <$> (char '.' *> many1 (letter <|> digit <|> msymbol))
+
+
 parseExprMatch :: (Fractional a, Real a) => Parser (Math a)
 parseExprMatch = (\c -> Op "exprM" [Sym . T.pack $ 'a':c])
              <$> (char '_' *> char 'a' *> many1 (letter <|> digit <|> msymbol))
@@ -73,6 +78,7 @@ parseSymMatch = (\c -> Op "symM" [Sym . T.pack $ 's':c])
 term :: (Fractional a, Real a) => Parser (Math a)
 term = try (parens lexer expr)
     <|> try parseFunc
+    <|> try parseListMatch
     <|> try parseExprMatch
     <|> try parseNumMatch
     <|> try parseSymMatch
