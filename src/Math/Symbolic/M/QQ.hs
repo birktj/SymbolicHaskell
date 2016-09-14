@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell, ViewPatterns, QuasiQuotes #-}
-module Math.Symbolic.M.QQ where
+module Math.Symbolic.M.QQ (sym) where
 
 import Math.Symbolic.Expression
 import Math.Symbolic.Simplify (level, runFun)
