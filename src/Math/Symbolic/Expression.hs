@@ -76,13 +76,14 @@ ifEq EQ a = a
 ifEq a  _ = a
 
 instance (Ord a) => Ord (Math a) where
-    compare (Op x xs) (Op y ys) = compare x y `ifEq` compare xs ys
-    compare Op{} _ = GT
-    compare _ Op{} = LT
-    compare (Sym x) (Sym y) = compare x y
-    compare Sym{} _ = GT
-    compare _ Sym{} = LT
     compare (Numeric x) (Numeric y) = compare x y
+    compare (Numeric _) _ = LT
+    compare _ (Numeric _) = GT
+    compare (Op x [x']) (Op y [y']) = compare y x `ifEq` compare x' y'
+    compare (Op x xs) (Op y ys) = compare y x `ifEq` compare (sort ys) (sort xs)
+    compare Op{} _ = LT
+    compare _ Op{} = GT
+    compare (Sym x) (Sym y) = compare x y
 
 instance (Ord a, Real a, Fractional a) => Num (Math a) where
     x + y = Op "+" [x, y]

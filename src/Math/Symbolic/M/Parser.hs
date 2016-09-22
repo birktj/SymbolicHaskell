@@ -90,9 +90,9 @@ table :: (Fractional a, Real a) => OperatorTable String () Identity (Math a)
 table = [ [binary "^" (**) AssocLeft],
           [prefix "-" negate],
           [binary "*" (*) AssocLeft, binary "/" (/) AssocLeft ],
-          [binary "*:" (\x y -> Op "*:" [x, y]) AssocLeft],
+          [binary "*:" (\x y -> Op "*:" [x, y]) AssocLeft, prefix ":*" (\x -> Op "*:" [x])],
           [binary "+" (+) AssocLeft, binary "-" (-) AssocLeft ],
-          [binary "+:" (\x y -> Op "+:" [x, y]) AssocLeft]
+          [binary "+:" (\x y -> Op "+:" [x, y]) AssocLeft, prefix ":+" (\x -> Op "+:" [x])]
         ]
 
 

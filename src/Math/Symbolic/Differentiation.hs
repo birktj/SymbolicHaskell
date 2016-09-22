@@ -29,19 +29,21 @@ onlyNumeric sym _ = True
 funDiff :: (Ord a, Real a, Fractional a) => Text -> Math a -> Math a
 funDiff "ln" expr = 1 / expr
 funDiff "sqrt"  expr = 1 / (2 * sqrt expr)
+funDiff "sin" expr = cos expr
+funDiff "cos" expr = - sin expr
 funDiff fun expr = Op "D" [Op fun [expr]]
 
 diff' :: (Ord a, Real a, Fractional a) => Math a -> Math a -> Math a
-diff' sym x | onlyNumeric sym x = 0
-                     | sym == x = 1
-diff' sym (Op "+" xs) = Op "+" $ diff' sym <$> xs
-diff' sym (Op "*" xs) = Op "+" . fmap (Op "*") $ listMod (diff' sym) xs
-diff' sym (Op "/" [x, y]) = (diff' sym x * y + diff' sym y * x) / y^2
-diff' sym (Op op [x]) = funDiff op x * diff' sym x
---diff' sym (Op "^" [x, y]) | onlyNumeric sym x =
---diff' sym (Op "^" [x, y]) = y * x**(y-1) * diff' sym x
-diff' sym (Op "^" [b, e]) = b**e * diff' sym (e * Op "ln" [b])
-diff' sym x = Op "D" [x]
+diff' e x | onlyNumeric e x = 0
+          | e == x          = 1
+diff' e (Op "+" xs) = Op "+" $ diff' e <$> xs
+diff' e (Op "*" xs) = Op "+" . fmap (Op "*") $ listMod (diff' e) xs
+diff' e (Op "/" [x, y]) = (diff' e x * y + diff' e y * x) / y^2
+diff' e (Op op [x]) = funDiff op x * diff' e x
+--diff' e (Op "^" [x, y]) | onlyNumeric e x =
+--diff' e (Op "^" [x, y]) = y * x**(y-1) * diff' e x
+diff' e (Op "^" [b, e']) = b**e' * diff' e (e' * Op "ln" [b])
+diff' e x = Op "D" [x]
 
 
 
