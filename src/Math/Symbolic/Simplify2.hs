@@ -54,16 +54,16 @@ level x = x
 rational :: (Fractional a, Real a) => Math a -> Math a
 rational x = case x of
     [sym|(_a1/_a2)/_a3|] -> a1 / (a2*a3)
-    [sym|_a1/(_a2/_a3)|] -> (a1*a2) / a3
-    Op "*" xs -> let (x, y, xs') = getRat xs
-                 in case y of
-                     1 -> Op "*" $ xs <> [x]
-                     _ -> Op "*" (x:xs) / y
+    [sym|_a1/(_a2/_a3)|] -> (a1*a3) / a2
+    Op "*" xs -> case getRat xs of
+                     Just (x, y, xs) -> Op "*" (x:xs) / y
+                     _ -> Op "*" xs
         where
-            getRat ([sym|_a1/_a2|]:xs) = (a1, a2, xs)
-            getRat (x:xs) = let (x', y', xs') = getRat xs
-                            in (x', y', x:xs')
-            getRat [] = (1, 1, [])
+            getRat ([sym|_a1/_a2|]:xs) = Just (a1, a2, xs)
+            getRat (x:xs) = do
+                            (x', y', xs') <- getRat xs
+                            return (x', y', x:xs')
+            getRat [] = Nothing
     _ -> x
 
 commonMForm :: (Fractional a, Real a) => Math a -> Math a
@@ -162,7 +162,7 @@ simplifyConst = runFun (traverseMath foldConst)
 simplify' :: (Fractional a, Real a, Ord a) => Math a -> Math a
 simplify' = runFun simplifyConst
           . likeTerms
-          . traverseMath rational
+          . runFun (traverseMath rational)
           . traverseMath sortMath
           . traverseMath level
 
@@ -195,3 +195,10 @@ simplify'' = sortMath
 x = Sym "x"
 y = Sym "y"
 z = Sym "z"
+
+a = Sym "a"
+b = Sym "b"
+c = Sym "c"
+d = Sym "d"
+e = Sym "e"
+f = Sym "f"

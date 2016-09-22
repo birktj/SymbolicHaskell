@@ -86,7 +86,7 @@ level x = x
 
 simplifyRational :: (Ord a, Fractional a, Real a) => Math a -> Math a
 simplifyRational (Op "/" [Op "/" [a, b], c]) = a / (b*c)
-simplifyRational (Op "/" [a, Op "/" [b, c]]) = (a*b) / c
+simplifyRational (Op "/" [a, Op "/" [b, c]]) = (a*c) / b
 simplifyRational (Op "*" xs) | any (isOp "/") xs = let (as, Op "/" [b, c]) = takeOp "/" xs
                                                    in Op "*" (b:as) / c
 simplifyRational (Op op xs) = Op op $ simplifyRational <$> xs
