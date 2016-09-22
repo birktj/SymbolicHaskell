@@ -2,7 +2,6 @@
 module Math.Symbolic.M.QQ (sym) where
 
 import Math.Symbolic.Expression
-import Math.Symbolic.Simplify (level, runFun)
 import Math.Symbolic.M.Parser
 import Math.Symbolic.Display
 
@@ -96,5 +95,33 @@ antiExprPat (Op "*:" xs) = Just $ do
 antiExprPat  _                = Nothing
 
 
+
+converge :: (a -> a -> Bool) -> [a] -> a
+converge p (x:ys@(y:_))
+    | p x y     = y
+    | otherwise = converge p ys
+
+
+runFun :: (Eq a) => (a -> a) -> a -> a
+runFun f a = converge (==) $ iterate f a
+
+
 level' :: (Ord a) => Math a -> Math a
 level' = runFun level
+
+
+level :: (Ord a) => Math a -> Math a
+level (Op "+" xs) = Op "+" . fmap level . concat $ level' <$> xs
+    where
+        level' (Op "+" xs) = xs
+        level' y = [y]
+
+level (Op "*" xs) = Op "*" . fmap level . concat $ level' <$> xs
+    where
+        level' (Op "*" xs) = xs
+        level' y = [y]
+
+
+level (Op op xs) = Op op $ level <$> xs
+
+level x = x

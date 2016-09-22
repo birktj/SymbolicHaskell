@@ -142,6 +142,17 @@ reduce (Op op xs) = Op op $ filter (not . emptyOp) xs
 reduce x = x
 
 
+expand :: (Fractional a, Real a) => Math a -> Math a
+expand = traverseMath expand'
+    where
+        expand' (Op "*" xs) = Op "+" . fmap (Op "*") $ mapM fromSum xs
+            where
+                fromSum (Op "+" xs) = xs
+                fromSum x = [x]
+        expand' [sym|(:*_a1)^_a2|] = Op "*" $ (**a2) <$> a1
+        expand' x = x
+
+
 simplifyConst :: (Fractional a, Real a, Ord a) => Math a -> Math a
 simplifyConst = runFun (traverseMath foldConst)
               . runFun (traverseMath reduce)
@@ -156,6 +167,30 @@ simplify' = runFun simplifyConst
           . traverseMath level
 
 simplify = runFun simplify'
+
+likeTerms' :: (Ord a, Fractional a, Real a) => Math a -> Math a
+likeTerms' = runFun (traverseMath reduce)
+          . traverseMath collectSLike
+          . traverseMath commonSForm
+          . runFun (traverseMath reduce)
+          . traverseMath collectMLike
+          . traverseMath commonMForm
+
+
+
+simplify'' :: (Fractional a, Real a, Ord a) => Math a -> Math a
+simplify'' = sortMath
+          -- . expand
+           . traverseMath foldConst
+           . runFun (traverseMath rational)
+           . sortMath
+           . traverseMath level
+           . likeTerms'
+           . runFun (traverseMath reduce)
+           . sortMath
+           . runFun (traverseMath rational)
+           . sortMath
+           . traverseMath level
 
 x = Sym "x"
 y = Sym "y"
